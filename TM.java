@@ -2,6 +2,7 @@ import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,46 +11,43 @@ import java.util.stream.Collectors;
 import java.util.Map;
 
 public class TM {
-    public static void main(String[] args) {
-        ArgumentParser command = new ArgumentParser(args);
-        ArrayList<String> commandList = command.parseArgument(args);
-        
-        CorrectCommand newCommand = new CorrectCommand(commandList);
-        if(commandList.get(0).equals("summary")) {
+    public static void main(String[] args) {      
+        CorrectCommand newCommand = new CorrectCommand(args);
+        if(args[0].equals("summary")) {
             Summary summary = new Summary();
             summary.run();
-            summary.getSummary(commandList);
+            summary.getSummary(args);
         }
         else {
-            Operation correctInstance = newCommand.GetCorrectInstance(commandList);
-            correctInstance.run(commandList);
+            Operation correctInstance = newCommand.GetCorrectInstance(args);
+            correctInstance.run(args);
         }
     }
 }
 
-class ArgumentParser {
-    public ArgumentParser(String[] args) {
-        if (args.length == 0 || args.length > 5) {
-            System.out.println("Invalid usage");
-            System.exit(0);
-        }
-    }
+// class ArgumentParser {
+//     public ArgumentParser(String[] args) {
+//         if (args.length == 0 || args.length > 5) {
+//             System.out.println("Invalid usage");
+//             System.exit(0);
+//         }
+//     }
 
-    public ArrayList<String> parseArgument(String[] args) {
-        ArrayList<String> command = new ArrayList<>();
+//     public ArrayList<String> parseArgument(String[] args) {
+//         ArrayList<String> command = new ArrayList<>();
 
-        for (int i = 0; i < args.length; i++) {
-            if (i == 0) {
-                command.add(args[i].toLowerCase());
-            }
-            else {
-                command.add(args[i]);
-            }
-        }
+//         for (int i = 0; i < args.length; i++) {
+//             if (i == 0) {
+//                 command.add(args[i].toLowerCase());
+//             }
+//             else {
+//                 command.add(args[i]);
+//             }
+//         }
 
-        return command;
-    }
-}
+//         return command;
+//     }
+// }
 
 class LogLineParser {
 
@@ -82,29 +80,29 @@ class LogLineParser {
 }
 
 class CorrectCommand {
-    public CorrectCommand(ArrayList<String> command) {
-        if(command.size() < 1) {
+    public CorrectCommand(String[] command) {
+        if(command.length < 1) {
             System.out.println("Too few arguments");
             System.exit(1);
         }
-        else if (command.size() > 4) {
+        else if (command.length > 4) {
             System.out.println("Too many arguments");
             System.exit(1);
         }
     }
 
-    public Operation GetCorrectInstance(ArrayList<String> command) {
-        if(command.get(0).equals("start")) 
+    public Operation GetCorrectInstance(String[] command) {
+        if(command[0].equals("start")) 
             { return new Start(command); }
-        else if (command.get(0).equals("stop")) 
+        else if (command[0].equals("stop")) 
             { return new Stop(command); }
-        else if (command.get(0).equals("describe")) 
+        else if (command[0].equals("describe")) 
             { return new Describe(command); }
-        else if (command.get(0).equals("size"))
+        else if (command[0].equals("size"))
             { return new Size(command); }
-        else if (command.get(0).equals("delete"))
+        else if (command[0].equals("delete"))
             { return new Delete(command); }
-        else if (command.get(0).equals("rename"))
+        else if (command[0].equals("rename"))
             { return new Rename(command); }
         
         System.out.println("Unknown command");
@@ -156,7 +154,7 @@ class Logger {
 
 class Metadata {
     private String taskName;
-    private String description ;
+    private String description;
     private String size;
     private long totalTime;
     private LocalDateTime startTime;
@@ -174,12 +172,9 @@ class Metadata {
         this.taskName = taskName;
     }
 
-    public void setStartTime(String time) {               
+    public void setStartTime(LocalDateTime time) {               
         if(!taskStarted) {
-            DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-            LocalDateTime startTime = LocalDateTime.parse(time, format);
-
-            this.startTime = startTime;
+            this.startTime = time;
             this.taskStarted = true;
         }
         // else{
@@ -187,20 +182,17 @@ class Metadata {
         // }
     }
 
-    public void setTotalTime(String time) {
-        if(taskStarted) {
-            DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-            LocalDateTime endTime = LocalDateTime.parse(time, format);
-
+    public void setTotalTime(LocalDateTime endTime) {
+        if(taskStarted && startTime != null) {
             Duration finalTime = Duration.between(this.startTime, endTime);
             long seconds = finalTime.getSeconds();
         
             this.taskStarted = false;
             this.totalTime += seconds;
         }
-        // else {
-        //     System.out.println("Ignoring stop");
-        // }
+        else {
+            System.out.println("Ignoring stop");
+        }
     }
 
     public void setDescription(String description, String size) {
@@ -236,7 +228,7 @@ class Metadata {
 }
 
 interface Operation {
-    void run(ArrayList<String> args);
+    void run(String[] args);
     String toString();
 }
 
@@ -244,8 +236,8 @@ class Start implements Operation {
     private Logger logger = new Logger();
     private String name = "start";
 
-    public Start(ArrayList<String> args) {
-        if(args.size() != 2) { 
+    public Start(String[] args) {
+        if(args.length!= 2) { 
             System.out.println("Incorrect Usage of start\n"
                                 + "Usage: java TM.java start <task name>"
                               );
@@ -254,10 +246,10 @@ class Start implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String taskName = args.get(1);
+        String command = args[0];
+        String taskName = args[1];
         String writeLine =  time + " " 
                             + taskName + " "
                             + command;
@@ -273,8 +265,8 @@ class Stop implements Operation {
     private Logger logger = new Logger();
     private String name = "Stop";
 
-    public Stop(ArrayList<String> args) {
-        if(args.size() != 2) { 
+    public Stop(String[] args) {
+        if(args.length != 2) { 
             System.out.println("Incorrect Usage of stop\n"
                                 + "Usage: java TM.java stop <task name>"
                               );
@@ -283,10 +275,10 @@ class Stop implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String taskName = args.get(1);
+        String command = args[0];
+        String taskName = args[1];
         String writeLine =  time + " " 
                             + taskName + " "
                             + command;
@@ -302,15 +294,15 @@ class Stop implements Operation {
 class Describe implements Operation {
     private Logger logger = new Logger();
 
-    public Describe(ArrayList<String> args) {
-        if(args.size() != 3 && args.size() != 4 ) { 
+    public Describe(String[] args) {
+        if(args.length != 3 && args.length != 4 ) { 
             System.out.println("Incorrect Usage of describe\n"
                                 + "Usage: java TM.java describe"
                                 + " <task name> <description> [{S|M|L|XL}]"
                               );
             System.exit(1);
         }
-        else if(args.size() == 4 && !isValidSize(args.get(3))) {
+        else if(args.length == 4 && !isValidSize(args[3])) {
             System.out.println("Incorrect size listed\n"
                                 + "Valid sizes: {S|M|L|XL}"
                               );
@@ -319,11 +311,11 @@ class Describe implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String taskName = args.get(1);
-        String description = args.get(2);
+        String command = args[0];
+        String taskName = args[1];
+        String description = args[2];
         String size;
 
         String writeLine =  time + " " 
@@ -331,8 +323,8 @@ class Describe implements Operation {
                             + command + " "
                             + "\"" + description + "\"";
         
-        if(args.size() == 4) {
-            size = args.get(3);
+        if(args.length == 4) {
+            size = args[3];
             writeLine += " " + size;
         }
         logger.appendToFile(writeLine);
@@ -361,9 +353,9 @@ class Summary {
     public void run() {
        
         ArrayList<String> log = logger.read();
-        for(String logLine : log) {
-            ArrayList<String> parsedLine = logParser.parse(logLine);
-            // TODO: Verification/Validation
+        for(int i = 0; i < log.size(); i++) {
+            ArrayList<String> parsedLine = logParser.parse(log.get(i));
+
             if(parsedLine.size() < 3 || parsedLine.size() > 6) {
                 continue;
             }
@@ -371,6 +363,7 @@ class Summary {
             String taskName = parsedLine.get(1);
             String command = parsedLine.get(2);
             Boolean newEntry = false;
+            LocalDateTime dateTime;
             Metadata metadata;
 
             if(data.containsKey(taskName)) {
@@ -382,15 +375,26 @@ class Summary {
                 metadata.setTaskName(taskName);
             }
 
+            if(validtateDateTime(time, i)) {
+                DateTimeFormatter format = DateTimeFormatter
+                                           .ISO_LOCAL_DATE_TIME;
+                dateTime = LocalDateTime.parse(time, format);
+            }
+            else {
+                System.out.println("Malformed date in log on line " + (i + 1));
+                dateTime = null;
+                System.exit(1);
+            }
+            
             if(command.equals("start")) {
-                metadata.setStartTime(time);
+                metadata.setStartTime(dateTime);
             }
             else if(command.equals("stop")) {
-                metadata.setTotalTime(time);
+                metadata.setTotalTime(dateTime);
             }
             else if(command.equals("describe")) {
                 String description = parsedLine.get(3);
-                String size = null;
+                String size = "";
                 if (parsedLine.size() == 5) {
                     size = parsedLine.get(4);
                 }
@@ -407,12 +411,17 @@ class Summary {
                     taskName = newName;
                     metadata.setTaskName(taskName);
                 }
-                else {
-                    continue;
-                }
+                else 
+                { continue; }
             }
             else if(command.equals("delete")) {
                 data.remove(taskName);
+                continue;
+            }
+            else {
+                System.out.println("Command \"" + command + "\" not recognized"
+                                    + " on line " + (i + 1) + "\n"
+                                    +  "Skipping...\n");
                 continue;
             }
 
@@ -420,23 +429,54 @@ class Summary {
         }
     }
 
-    public void getSummary(ArrayList<String> command) {
-        if(command.size() == 1) {
-            summary();
-        }
+    public void getSummary(String[] command) {
+        if(command.length == 1) 
+            { summary(); }
         else {
-            summary(command.get(1));
+            String taskName = command[1];
+            summary(taskName);
+        }
+    }
+
+    private Boolean validtateDateTime(String time, int lineIndex) {
+        try {
+            DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            LocalDateTime.parse(time, format);
+            return true;
+        } catch (DateTimeParseException e) {
+            return false;
         }
     }
 
     private void summary() {
         long totalTime = 0;
+        HashMap<String, ArrayList<Long>> times = new HashMap<>();
+        times.put("S", new ArrayList<Long>());
+        times.put("M", new ArrayList<Long>());
+        times.put("L", new ArrayList<Long>());
+        times.put("XL", new ArrayList<Long>());
+        
         for (String taskName : data.keySet()) {
-            
             Metadata metadata = data.get(taskName);
+            String size = metadata.getSize();
+            if(isASize(size)) {
+                ArrayList<Long> time = times.get(size);
+                time.add(metadata.getTotalTime());
+                times.put(size, time);
+            }
             totalTime += metadata.getTotalTime();
+
             printSummary(metadata);        
         }
+        for (String key : times.keySet()) {
+            ArrayList<Long> taskSize = times.get(key);
+            if(taskSize.size() >= 2){
+                System.out.println("Stats for size " + key);
+                printMinMaxAvg(taskSize);
+                System.out.println("=====================================");
+            }
+        }
+        //TODO: loop through time hashmap, check if value >= 2, run printMinMaxAverage
         System.out.println("Total time on all tasks:\t" 
                             + getTimeFormat(totalTime));
     }
@@ -456,12 +496,46 @@ class Summary {
                 System.exit(1);
             }
             
-            Metadata metadata = data.get(taskOrSize);
+            Metadata metadata = data.get(taskName);
             printSummary(metadata);
         }
         else {
             //TODO: sort by size
+            String size = taskOrSize;
+
+            ArrayList<Metadata> metadataList;
+            ArrayList<Long> times = new ArrayList<>();
+            metadataList = data.entrySet().stream()
+                        .filter(entry -> entry.getValue()
+                                              .getSize()
+                                              .equals(size))
+                        .map(entry -> entry.getValue())
+                        .collect(Collectors.toCollection(ArrayList::new));
+
+            if (metadataList.size() == 0) {
+                System.out.println("Task(s) do not exist for size " + size);
+                System.exit(1);
+            }
+
+            for (Metadata data : metadataList) {
+                times.add(data.getTotalTime());
+                printSummary(data);
+            }
+            if(times.size() >= 2) {
+                printMinMaxAvg(times);
+            }
         }
+    }
+
+    private void printMinMaxAvg(ArrayList<Long> times) {
+        Long min = Collections.min(times);
+        Long max = Collections.max(times);
+        Long average = times.stream()
+                            .mapToLong()
+                            .average();
+        System.out.println("Minimum time is " + min);
+        System.out.println("Maximum time is " + max);
+        System.out.println("Maximum time is " + average);
     }
 
     private void printSummary(Metadata metadata) {
@@ -479,24 +553,19 @@ class Summary {
         long remainingSeconds = seconds % 60;
         String timeString = "";
         
-        if (hours < 9) {
-            timeString = timeString.concat("0" + hours + ":");
-        }
-        else {
-            timeString = timeString.concat("" + hours + ":");
-        }
-        if (minutes < 9) {
-            timeString = timeString.concat("0" + minutes + ":");
-        }
-        else {
-            timeString = timeString.concat("" + minutes + ":");
-        }
-        if (remainingSeconds < 9) {
-            timeString = timeString.concat("0" + remainingSeconds);
-        }
-        else {
-            timeString = timeString.concat("" + remainingSeconds);
-        }
+        if (hours < 9) 
+            { timeString = timeString.concat("0" + hours + ":"); }
+        else 
+            { timeString = timeString.concat("" + hours + ":"); }
+    
+        if (minutes < 9) 
+            { timeString = timeString.concat("0" + minutes + ":"); }
+        else 
+            { timeString = timeString.concat("" + minutes + ":"); }
+        if (remainingSeconds < 9) 
+            { timeString = timeString.concat("0" + remainingSeconds); }
+        else 
+            { timeString = timeString.concat("" + remainingSeconds); }
         return timeString;
     }
 
@@ -504,7 +573,8 @@ class Summary {
         String[] validSizes = {"S", "M", "L", "XL"};
 
         for (String validSize : validSizes) {
-            if (size.equals(validSize)) { return true; }
+            if (size.equals(validSize))
+                 { return true; }
         }
         return false;
     }
@@ -513,8 +583,8 @@ class Summary {
 class Size implements Operation {
     private Logger logger = new Logger();
 
-    public Size(ArrayList<String> args) {
-        if(args.size() != 3 || isValidSize(args.get(2))) { 
+    public Size(String[] args) {
+        if(args.length != 3 || isValidSize(args[2])) { 
             System.out.println("Incorrect Usage of size\n"
                                 + "Usage: java TM.java size" 
                                 + " <task name> {S|M|L|XL}"
@@ -524,11 +594,11 @@ class Size implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String taskName = args.get(1);
-        String size = args.get(2);
+        String command = args[0];
+        String taskName = args[1];
+        String size = args[2];
 
         String writeLine =  time + " " 
                             + taskName + " "
@@ -542,7 +612,8 @@ class Size implements Operation {
         String[] validSizes = {"S", "M", "L", "XL"};
 
         for (String validSize : validSizes) {
-            if (size == validSize) { return true; }
+            if (size == validSize)
+                 { return true; }
         }
         return false;
     }
@@ -551,8 +622,8 @@ class Size implements Operation {
 class Rename implements Operation {
     private Logger logger = new Logger();
 
-    public Rename(ArrayList<String> args) {
-        if(args.size() != 3) { 
+    public Rename(String[] args) {
+        if(args.length != 3) { 
             System.out.println("Incorrect Usage of rename\n"
                                 + "Usage: java TM.java rename" 
                                 + " <old task name> <new task name>"
@@ -562,11 +633,11 @@ class Rename implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String oldTaskName = args.get(1);
-        String newTaskName = args.get(2);
+        String command = args[0];
+        String oldTaskName = args[1];
+        String newTaskName = args[2];
 
          String writeLine =  time + " " 
                             + oldTaskName + " "
@@ -580,8 +651,8 @@ class Rename implements Operation {
 class Delete implements Operation {
     private Logger logger = new Logger();
 
-     public Delete(ArrayList<String> args) {
-        if(args.size() > 3) { 
+     public Delete(String[] args) {
+        if(args.length > 3) { 
             System.out.println("Incorrect Usage of delete\n"
                                 + " Usage: java TM.java delete <task name>"
                               );
@@ -590,10 +661,10 @@ class Delete implements Operation {
     }
 
     @Override
-    public void run(ArrayList<String> args) {
+    public void run(String[] args) {
         LocalDateTime time = LocalDateTime.now();
-        String command = args.get(0);
-        String taskName = args.get(1);
+        String command = args[0];
+        String taskName = args[1];
 
         String writeLine =  time + " " 
                             + taskName + " "
