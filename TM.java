@@ -18,32 +18,14 @@ public class TM {
         if(commandList.get(0).equals("summary")) {
             Summary summary = new Summary();
             summary.run();
+            summary.getSummary(commandList);
         }
         else {
             Operation correctInstance = newCommand.GetCorrectInstance(commandList);
             correctInstance.run(commandList);
         }
-        
-
-        // Check integrety of the log files
-
-        // Parse 
-        
-        
-        // Figure out command
-
-        //private Operation operation = new Start();
-
-        // Parse log files & save state (if needed)
-
-        // Run operation
-
     }
 }
-
-// interface Parser {
-//     ArrayList<String> parseTarget(String[] target);
-// }
 
 class ArgumentParser {
     public ArgumentParser(String[] args) {
@@ -64,13 +46,7 @@ class ArgumentParser {
                 command.add(args[i]);
             }
         }
-        
-        // debug purposes, delete later
-        // for (int i = 0; i < command.size(); i++) {
-        //     System.out.println("Arg " + i + " is " + command.get(i));
-        // }
-        // end debug
-        
+
         return command;
     }
 }
@@ -124,8 +100,6 @@ class CorrectCommand {
             { return new Stop(command); }
         else if (command.get(0).equals("describe")) 
             { return new Describe(command); }
-        // else if (command.get(0).equals("summary")) 
-        //     { return new Summary(); }
         else if (command.get(0).equals("size"))
             { return new Size(command); }
         else if (command.get(0).equals("delete"))
@@ -196,6 +170,10 @@ class Metadata {
         this.taskStarted = false;
     }
 
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
     public void setStartTime(String time) {               
         if(!taskStarted) {
             DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -240,7 +218,9 @@ class Metadata {
             }
         }
     }
-
+    public String getTaskName() {
+        return taskName;
+    }
     public long getTotalTime() {
         return totalTime;
     }
@@ -377,7 +357,6 @@ class Summary {
     private final Logger logger = new Logger();
     private final LogLineParser logParser = new LogLineParser();
     private HashMap<String, Metadata> data = new HashMap<>();
-    private long totalTime = 0;
     
     public void run() {
        
@@ -400,6 +379,7 @@ class Summary {
             else {
                 newEntry = true;
                 metadata = new Metadata();
+                metadata.setTaskName(taskName);
             }
 
             if(command.equals("start")) {
@@ -425,35 +405,72 @@ class Summary {
                     String newName = parsedLine.get(3);
                     data.remove(taskName);
                     taskName = newName;
-                    //can include setter for Metadata to set taskName 
+                    metadata.setTaskName(taskName);
+                }
+                else {
+                    continue;
                 }
             }
             else if(command.equals("delete")) {
                 data.remove(taskName);
                 continue;
             }
-            
-            data.put(taskName, metadata);
 
+            data.put(taskName, metadata);
         }
+    }
+
+    public void getSummary(ArrayList<String> command) {
+        if(command.size() == 1) {
+            summary();
+        }
+        else {
+            summary(command.get(1));
+        }
+    }
+
+    private void summary() {
+        long totalTime = 0;
         for (String taskName : data.keySet()) {
             
             Metadata metadata = data.get(taskName);
-
-            String timeFormat = getTimeFormat(metadata.getTotalTime());
             totalTime += metadata.getTotalTime();
-             // Debug, delete after
-            // System.out.println(metadata.gettaskStarted());
-            // End debug
-            System.out.println("Stats for task " + taskName + ":");
-            System.out.println("\tTask Time:\t" + timeFormat);
-            System.out.println("\tDescription:\t" + metadata.getDescription());
-            System.out.println("\tSize:\t\t" + metadata.getSize());
-            System.out.println("=====================================");
-            
+            printSummary(metadata);        
         }
         System.out.println("Total time on all tasks:\t" 
                             + getTimeFormat(totalTime));
+    }
+
+    private void summary(String taskOrSize) {
+        if(!isASize(taskOrSize)) {
+            String taskName = "";
+
+            for (String task : data.keySet()) {
+                if(task.equals(taskOrSize)) {
+                    taskName = taskOrSize;
+                    break;
+                }    
+            }
+            if (taskName.equals("")) {
+                System.out.println("Task does not exist");
+                System.exit(1);
+            }
+            
+            Metadata metadata = data.get(taskOrSize);
+            printSummary(metadata);
+        }
+        else {
+            //TODO: sort by size
+        }
+    }
+
+    private void printSummary(Metadata metadata) {
+        String timeFormat = getTimeFormat(metadata.getTotalTime());
+        System.out.println("Stats for task " + metadata.getTaskName() + ":");
+        System.out.println("\tTask Time:\t" + timeFormat);
+        System.out.println("\tDescription:\t" + metadata.getDescription());
+        System.out.println("\tSize:\t\t" + metadata.getSize());
+        System.out.println("=====================================");
     }
 
     private String getTimeFormat(long seconds) {
@@ -482,11 +499,15 @@ class Summary {
         }
         return timeString;
     }
-    
-    @Override
-    public String toString() {
-        return "summary";
-    } 
+
+    private Boolean isASize(String size) {
+        String[] validSizes = {"S", "M", "L", "XL"};
+
+        for (String validSize : validSizes) {
+            if (size.equals(validSize)) { return true; }
+        }
+        return false;
+    }
 }
 
 class Size implements Operation {
@@ -516,11 +537,6 @@ class Size implements Operation {
 
         logger.appendToFile(writeLine);
     }
-
-    @Override
-    public String toString() {
-        return "size";
-    } 
 
     private Boolean isValidSize(String size) {
         String[] validSizes = {"S", "M", "L", "XL"};
@@ -559,11 +575,6 @@ class Rename implements Operation {
 
         logger.appendToFile(writeLine);
     }
-
-    @Override
-    public String toString() {
-        return "rename";
-    } 
 }
 
 class Delete implements Operation {
@@ -590,16 +601,6 @@ class Delete implements Operation {
 
         logger.appendToFile(writeLine);
     }
-
-    public Boolean validNumberOfArgs(ArrayList<String> args) {
-        if(args.size() == 2) { return true; }
-        return false;
-    }
-
-    @Override
-    public String toString() {
-        return "delete";
-    } 
 }
 
 // -----------------------------------------------------------------------
