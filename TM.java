@@ -2,7 +2,11 @@ import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Scanner;
+import java.util.stream.Collectors;
+import java.util.Map;
 
 public class TM {
     public static void main(String[] args) {
@@ -22,7 +26,11 @@ public class TM {
     }
 }
 
-class ArgumentParser {
+interface Parser {
+    ArrayList<String> parseTarget(String[] target);
+}
+
+class ArgumentParser implements Parser{
     public ArgumentParser(String[] args) {
         if (args.length == 0 || args.length > 5) {
             System.out.println("Invalid usage");
@@ -30,7 +38,8 @@ class ArgumentParser {
         }
     }
 
-    public ArrayList<String> ObtainCommand(String[] args) {
+    @Override
+    public ArrayList<String> parseTarget(String[] args) {
         ArrayList<String> command = new ArrayList<>();
 
         for (int i = 0; i < args.length; i++) {
@@ -58,6 +67,15 @@ class ArgumentParser {
     
     public Operation GetCorrectInstance(ArrayList<String> yo) {
         return new Start(yo);
+    }
+}
+
+class LogLineParser implements Parser {
+    @Override
+    public ArrayList<String> parseTarget(String[] target) {
+        return Arrays.stream(target)
+                    .filter(word -> !word.isEmpty())
+                    .collect(Collectors.toCollection(ArrayList::new));
     }
 }
 
@@ -136,8 +154,170 @@ class Logger {
     }
 }
 
-class ValidateIntegrety {
+class Validation {
+    private Map<String, String> validStates = new HashMap<>();
 
+    // private boolean goodStart(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (!validStates.containsKey(name)) {
+    //             validStates.put(name, command);
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodStop(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             validStates.put(name, command);
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodDescribe(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodSummary(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodSize(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodDelete(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             validStates.remove(name);
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // private boolean goodRename(ArrayList<String> logLine) {
+    //     String name = logLine.get(1);
+    //     String command = logLine.get(2);
+
+    //     if (validStates.containsKey(name)) {
+    //             String newName = logLine.get(3);
+    //             if (!validStates.containsKey(newName)) {
+    //                 String state = validStates.get(name);
+    //                 validStates.remove(name);
+    //                 // Update task name
+    //                 validStates.put(newName, state);
+    //             }
+    //             return true;
+    //     }
+
+    //     return false;
+    // }
+
+    // TODO breakdown to small functions
+    public boolean validAction(ArrayList<String> logLine) {
+        String name = logLine.get(1);
+        String command = logLine.get(2);
+
+        if (command == "start") {
+            if (!validStates.containsKey(name)) {
+                validStates.put(name, command);
+                return true;
+            }
+        }
+        else if (command == "stop") {
+            if (validStates.containsKey(name)) {
+                validStates.put(name, command);
+                return true;
+            }
+        }
+        else if (command == "describe") {
+            if (validStates.containsKey(name)) {
+                return true;
+            }
+        }
+        else if (command == "summary") {
+            if (validStates.containsKey(name)) {
+                return true;
+            }
+        }
+        // Todo: Double check
+        else if (command == "size") {
+            if (validStates.containsKey(name)) {
+                return true;
+            }
+        }
+        else if (command == "delete") {
+            if (validStates.containsKey(name)) {
+                validStates.remove(name);
+                return true;
+            }
+        }
+        else if (command == "rename") {
+            if (validStates.containsKey(name)) {
+                String newName = logLine.get(3);
+                if (!validStates.containsKey(newName)) {
+                    String state = validStates.get(name);
+                    validStates.remove(name);
+                    // Update task name
+                    validStates.put(newName, state);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean validLogFile(ArrayList<String> loggerLines) {
+        LogLineParser parser = new LogLineParser();
+        int i = 0;
+        for (String line : loggerLines) {
+            ArrayList<String> parsedLine = parser.parseTarget(line.split(" "));
+            if (!validAction(parsedLine)) {
+                System.out.println(
+                    "Found invalid lines in TMlog.txt on line " +
+                    String.valueOf(i)
+                );
+                return false;
+            }
+            i++;
+        }
+        return true;
+    }
+
+    public Map<String, String> getstates() {
+        return new HashMap<>(validStates);
+    }
 }
 
 interface Operation {
