@@ -4,11 +4,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.stream.Collectors;
-import java.util.Map;
 
 public class TM {
     public static void main(String[] args) {      
@@ -530,12 +529,13 @@ class Summary {
     private void printMinMaxAvg(ArrayList<Long> times) {
         Long min = Collections.min(times);
         Long max = Collections.max(times);
-        Long average = times.stream()
-                            .mapToLong()
-                            .average();
+        Double average = times.stream()
+                            .mapToLong(Long::longValue)
+                            .average()
+                            .orElse(0.0);
         System.out.println("Minimum time is " + min);
         System.out.println("Maximum time is " + max);
-        System.out.println("Maximum time is " + average);
+        System.out.println("Average time is " + average);
     }
 
     private void printSummary(Metadata metadata) {
