@@ -51,7 +51,7 @@ class CorrectCommand {
             System.out.println("Too many arguments");
             System.exit(1);
         }
-        else if (Util.isASize(command[1])) { 
+        else if (command.length > 1 && Util.isASize(command[1])) { 
             System.out.println("Cannot use size as a task name");
             System.exit(1);
         }
@@ -131,7 +131,7 @@ class Util {
     }
 }
 
-class Metadata {
+class TaskData {
     private String taskName;
     private String description;
     private String size;
@@ -139,7 +139,7 @@ class Metadata {
     private LocalDateTime startTime;
     private boolean taskStarted;
 
-    public Metadata() {
+    public TaskData() {
         this.taskName = "";
         this.description = "";
         this.size = "";
@@ -205,7 +205,7 @@ class Summary implements Operation {
     public Summary(String[] args) {}
     private final Logger logger = new Logger();
     private final LogLineParser logParser = new LogLineParser();
-    private HashMap<String, Metadata> data = new HashMap<>();
+    private HashMap<String, TaskData> data = new HashMap<>();
     
     public void run(String[] args) {
        
@@ -227,15 +227,15 @@ class Summary implements Operation {
         String taskName = parsedLine.get(1);
         String command = parsedLine.get(2);
         LocalDateTime dateTime = parseDateTime(time, lineNumber);
-        Metadata metadata = getOrCreateMetadata(taskName);
+        TaskData taskData = getOrCreateTaskData(taskName);
 
         if(command.equals("start")) {
-            metadata.setStartTime(dateTime);
-            data.put(taskName, metadata);
+            taskData.setStartTime(dateTime);
+            data.put(taskName, taskData);
         }
         else if(command.equals("stop")) {
-            metadata.setTotalTime(dateTime);
-            data.put(taskName, metadata);
+            taskData.setTotalTime(dateTime);
+            data.put(taskName, taskData);
         }
         else if(command.equals("describe")) {
             String description = parsedLine.get(3);
@@ -243,21 +243,21 @@ class Summary implements Operation {
             if (parsedLine.size() == 5) {
                 size = parsedLine.get(4);
             }
-            metadata.setDescription(description, size);
-            data.put(taskName, metadata);
+            taskData.setDescription(description, size);
+            data.put(taskName, taskData);
         }
         else if(command.equals("size")) {
             String size = parsedLine.get(3);
-            metadata.setSize(size);
-            data.put(taskName, metadata);
+            taskData.setSize(size);
+            data.put(taskName, taskData);
         }
         else if(command.equals("rename")) {
             if (data.containsKey(taskName)) {
                 String newName = parsedLine.get(3);
                 data.remove(taskName);
                 taskName = newName;
-                metadata.setTaskName(taskName);
-                data.put(taskName, metadata);
+                taskData.setTaskName(taskName);
+                data.put(taskName, taskData);
             }
         }
         else if(command.equals("delete")) {
@@ -283,16 +283,16 @@ class Summary implements Operation {
         return null; // Not reachable line for compilation purposes
     }
 
-    private Metadata getOrCreateMetadata(String taskName) {
-        Metadata metadata;
+    private TaskData getOrCreateTaskData(String taskName) {
+        TaskData taskData;
         if(data.containsKey(taskName)) {
-                metadata = data.get(taskName);
+                taskData = data.get(taskName);
         }
         else {
-            metadata = new Metadata();
-            metadata.setTaskName(taskName);
+            taskData = new TaskData();
+            taskData.setTaskName(taskName);
         }
-        return metadata;
+        return taskData;
     }
 
     public void getSummary(String[] command) {
@@ -340,16 +340,16 @@ class Summary implements Operation {
     private void getTotalTime(long totalTime, 
                                HashMap<String, ArrayList<Long>> times) {
         for (String taskName : data.keySet()) {
-            Metadata metadata = data.get(taskName);
-            String size = metadata.getSize();
+            TaskData taskData = data.get(taskName);
+            String size = taskData.getSize();
             if(Util.isASize(size)) {
                 ArrayList<Long> time = times.get(size);
-                time.add(metadata.getTotalTime());
+                time.add(taskData.getTotalTime());
                 times.put(size, time);
             }
-            totalTime += metadata.getTotalTime();
+            totalTime += taskData.getTotalTime();
 
-            printSummary(metadata);     
+            printSummary(taskData);     
         }
     }
 
@@ -368,23 +368,23 @@ class Summary implements Operation {
             System.exit(1);
         }
 
-        Metadata metadata = data.get(taskName);
-        printSummary(metadata);
+        TaskData taskData = data.get(taskName);
+        printSummary(taskData);
     }
 
     private void summaryBySize(String size) {
-        ArrayList<Metadata> metadataList;
+        ArrayList<TaskData> taskDataList;
         ArrayList<Long> times = new ArrayList<>();
-        metadataList = data.entrySet().stream()
+        taskDataList = data.entrySet().stream()
                     .filter(entry -> entry.getValue().getSize().equals(size))
                     .map(entry -> entry.getValue())
                     .collect(Collectors.toCollection(ArrayList::new));
 
-        if (metadataList.size() == 0) {
+        if (taskDataList.size() == 0) {
             System.out.println("Task(s)(s) do not exist for size " + size);
             System.exit(1);
         }
-        for (Metadata data : metadataList) {
+        for (TaskData data : taskDataList) {
             times.add(data.getTotalTime());
             printSummary(data);
         }
@@ -414,12 +414,12 @@ class Summary implements Operation {
         System.out.println("\tAverage time:\t" + getTimeFormat(average));
     }
 
-    private void printSummary(Metadata metadata) {
-        String timeFormat = getTimeFormat(metadata.getTotalTime());
-        System.out.println("Stats for task " + metadata.getTaskName() + ":");
+    private void printSummary(TaskData taskData) {
+        String timeFormat = getTimeFormat(taskData.getTotalTime());
+        System.out.println("Stats for task " + taskData.getTaskName() + ":");
         System.out.println("\tTask Time:\t" + timeFormat);
-        System.out.println("\tDescription:\t" + metadata.getDescription());
-        System.out.println("\tSize:\t\t" + metadata.getSize());
+        System.out.println("\tDescription:\t" + taskData.getDescription());
+        System.out.println("\tSize:\t\t" + taskData.getSize());
         System.out.println("=====================================");
     }
 
