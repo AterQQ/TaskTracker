@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
@@ -48,6 +47,10 @@ class CorrectCommand {
         }
         else if (command.length > 4) {
             System.out.println("Too many arguments");
+            System.exit(1);
+        }
+        else if (Util.isASize(command[1])) { 
+            System.out.println("Cannot use size as a task name");
             System.exit(1);
         }
     }
@@ -317,18 +320,8 @@ class Summary implements Operation {
         times.put("L", new ArrayList<Long>());
         times.put("XL", new ArrayList<Long>());
         
-        for (String taskName : data.keySet()) {
-            Metadata metadata = data.get(taskName);
-            String size = metadata.getSize();
-            if(Util.isASize(size)) {
-                ArrayList<Long> time = times.get(size);
-                time.add(metadata.getTotalTime());
-                times.put(size, time);
-            }
-            totalTime += metadata.getTotalTime();
+        getTotalTime(totalTime, times);
 
-            printSummary(metadata);        
-        }
         for (String key : times.keySet()) {
             ArrayList<Long> taskSize = times.get(key);
             if(taskSize.size() >= 2){
@@ -340,6 +333,22 @@ class Summary implements Operation {
 
         System.out.println("Total time on all tasks:\t" 
                             + getTimeFormat(totalTime));
+    }
+    
+    private void getTotalTime(long totalTime, 
+                               HashMap<String, ArrayList<Long>> times) {
+        for (String taskName : data.keySet()) {
+            Metadata metadata = data.get(taskName);
+            String size = metadata.getSize();
+            if(Util.isASize(size)) {
+                ArrayList<Long> time = times.get(size);
+                time.add(metadata.getTotalTime());
+                times.put(size, time);
+            }
+            totalTime += metadata.getTotalTime();
+
+            printSummary(metadata);     
+        }
     }
 
     private void summary(String taskOrSize) {
