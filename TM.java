@@ -51,16 +51,16 @@ class CorrectCommand {
             System.out.println("Too many arguments");
             System.exit(1);
         }
-        else if (command.length > 1 && Util.isASize(command[1])) { 
-            System.out.println("Cannot use size as a task name");
-            System.exit(1);
-        }
     }
 
     public Operation GetCorrectInstance(String[] command) {
         if (command[0].equals("summary"))
             { return new Summary(command); }
-        else if(command[0].equals("start")) 
+        else if (Util.isASize(command[1])) { 
+            System.out.println("Cannot use size as a task name");
+            System.exit(1);
+        }
+        if(command[0].equals("start")) 
             { return new Start(command); }
         else if (command[0].equals("stop")) 
             { return new Stop(command); }
@@ -322,7 +322,7 @@ class Summary implements Operation {
         times.put("L", new ArrayList<Long>());
         times.put("XL", new ArrayList<Long>());
         
-        getTotalTime(totalTime, times);
+        totalTime = getTotalTime(totalTime, times);
 
         for (String key : times.keySet()) {
             ArrayList<Long> taskSize = times.get(key);
@@ -337,7 +337,7 @@ class Summary implements Operation {
                             + getTimeFormat(totalTime));
     }
     
-    private void getTotalTime(long totalTime, 
+    private Long getTotalTime(long totalTime, 
                                HashMap<String, ArrayList<Long>> times) {
         for (String taskName : data.keySet()) {
             TaskData taskData = data.get(taskName);
@@ -349,8 +349,9 @@ class Summary implements Operation {
             }
             totalTime += taskData.getTotalTime();
 
-            printSummary(taskData);     
+            printSummary(taskData);
         }
+        return totalTime;
     }
 
     private void summary(String taskOrSize) {
