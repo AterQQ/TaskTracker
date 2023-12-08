@@ -1,4 +1,7 @@
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -108,7 +111,6 @@ class Logger {
             System.out.println("Could not write to file: " + e);
             System.exit(1);
         }
-        
     }
 }
 
@@ -149,9 +151,6 @@ class Metadata {
             this.startTime = time;
             this.taskStarted = true;
         }
-        // else{
-        //     System.out.println("Ignoring start");
-        // }
     }
 
     public void setTotalTime(LocalDateTime endTime) {
@@ -162,9 +161,6 @@ class Metadata {
             this.taskStarted = false;
             this.totalTime += seconds;
         }
-        // else {
-        //     System.out.println("Ignoring stop");
-        // }
     }
 
     public void setDescription(String description, String size) {
@@ -210,78 +206,6 @@ class Summary implements Operation {
        
         ArrayList<String> log = logger.read();
         for(int i = 0; i < log.size(); i++) {
-            // ArrayList<String> parsedLine = logParser.parse(log.get(i));
-
-            // if(parsedLine.size() < 3 || parsedLine.size() > 6) {
-            //     continue;
-            // }
-            // String time = parsedLine.get(0);
-            // String taskName = parsedLine.get(1);
-            // String command = parsedLine.get(2);
-            // Boolean newEntry = false;
-            // LocalDateTime dateTime;
-            // Metadata metadata;
-
-            // if(data.containsKey(taskName)) {
-            //     metadata = data.get(taskName);
-            // }
-            // else {
-            //     newEntry = true;
-            //     metadata = new Metadata();
-            //     metadata.setTaskName(taskName);
-            // }
-
-            // if(validtateDateTime(time, i)) {
-            //     DateTimeFormatter format = DateTimeFormatter
-            //                                .ISO_LOCAL_DATE_TIME;
-            //     dateTime = LocalDateTime.parse(time, format);
-            // }
-            // else {
-            //     System.out.println("Malformed date in log on line " + (i + 1));
-            //     dateTime = null;
-            //     System.exit(1);
-            // }
-            
-            // if(command.equals("start")) {
-            //     metadata.setStartTime(dateTime);
-            // }
-            // else if(command.equals("stop")) {
-            //     metadata.setTotalTime(dateTime);
-            // }
-            // else if(command.equals("describe")) {
-            //     String description = parsedLine.get(3);
-            //     String size = "";
-            //     if (parsedLine.size() == 5) {
-            //         size = parsedLine.get(4);
-            //     }
-            //     metadata.setDescription(description, size);
-            // }
-            // else if(command.equals("size")) {
-            //     String size = parsedLine.get(3);
-            //     metadata.setSize(size);
-            // }
-            // else if(command.equals("rename")) {
-            //     if(!newEntry) {
-            //         String newName = parsedLine.get(3);
-            //         data.remove(taskName);
-            //         taskName = newName;
-            //         metadata.setTaskName(taskName);
-            //     }
-            //     else 
-            //     { continue; }
-            // }
-            // else if(command.equals("delete")) {
-            //     data.remove(taskName);
-            //     continue;
-            // }
-            // else {
-            //     System.out.println("Command \"" + command + "\" not recognized"
-            //                         + " on line " + (i + 1) + "\n"
-            //                         +  "Skipping...\n");
-            //     continue;
-            // }
-
-            // data.put(taskName, metadata);
             processLogLines(log.get(i), i);
         }
         getSummary(args);
@@ -413,54 +337,16 @@ class Summary implements Operation {
                 System.out.println("=====================================");
             }
         }
-        //TODO: loop through time hashmap, check if value >= 2, run printMinMaxAverage
+
         System.out.println("Total time on all tasks:\t" 
                             + getTimeFormat(totalTime));
     }
 
     private void summary(String taskOrSize) {
         if(!Util.isASize(taskOrSize)) {
-            // String taskName = "";
-
-            // for (String task : data.keySet()) {
-            //     if(task.equals(taskOrSize)) {
-            //         taskName = taskOrSize;
-            //         break;
-            //     }    
-            // }
-            // if (taskName.equals("")) {
-            //     System.out.println("Task does not exist");
-            //     System.exit(1);
-            // }
-            
-            // Metadata metadata = data.get(taskName);
-            // printSummary(metadata);
-
             summaryByName(taskOrSize);
         }
         else {
-            // String size = taskOrSize;
-
-            // ArrayList<Metadata> metadataList;
-            // ArrayList<Long> times = new ArrayList<>();
-            // metadataList = data.entrySet().stream()
-            //             .filter(entry -> entry.getValue()
-            //                                   .getSize()
-            //                                   .equals(size))
-            //             .map(entry -> entry.getValue())
-            //             .collect(Collectors.toCollection(ArrayList::new));
-
-            // if (metadataList.size() == 0) {
-            //     System.out.println("Task(s)(s) do not exist for size " + size);
-            //     System.exit(1);
-            // }
-            // for (Metadata data : metadataList) {
-            //     times.add(data.getTotalTime());
-            //     printSummary(data);
-            // }
-            // if(times.size() >= 2) {
-            //     printMinMaxAvg(times);
-            // }
             summaryBySize(taskOrSize);
         }
     }
@@ -495,7 +381,6 @@ class Summary implements Operation {
             printMinMaxAvg(times);
         }
     }
-
 
     private void printMinMaxAvg(ArrayList<Long> times) {
         long min = times.get(0);
@@ -641,15 +526,6 @@ class Describe implements Operation {
         }
         logger.appendToFile(writeLine);
     }
-
-    // private Boolean isValidSize(String size) {
-    //     String[] validSizes = {"S", "M", "L", "XL"};
-
-    //     for (String validSize : validSizes) {
-    //         if (size.equals(validSize)) { return true; }
-    //     }
-    //     return false;
-    // }
 }
 
 class Size implements Operation {
@@ -679,16 +555,6 @@ class Size implements Operation {
 
         logger.appendToFile(writeLine);
     }
-
-    // private Boolean isASize(String size) {
-    //     String[] validSizes = {"S", "M", "L", "XL"};
-
-    //     for (String validSize : validSizes) {
-    //         if (size == validSize)
-    //              { return true; }
-    //     }
-    //     return false;
-    // }
 }
 
 class Rename implements Operation {
