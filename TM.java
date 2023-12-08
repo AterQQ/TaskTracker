@@ -12,54 +12,14 @@ import java.util.stream.Collectors;
 public class TM {
     public static void main(String[] args) {      
         CorrectCommand newCommand = new CorrectCommand(args);
-        if(args[0].equals("summary")) {
-            Summary summary = new Summary();
-            summary.run();
-            summary.getSummary(args);
-        }
-        else {
-            Operation correctInstance = newCommand.GetCorrectInstance(args);
-            correctInstance.run(args);
-        }
+        Operation correctInstance = newCommand.GetCorrectInstance(args);
+        correctInstance.run(args);
     }
 }
-
-// class ArgumentParser {
-//     public ArgumentParser(String[] args) {
-//         if (args.length == 0 || args.length > 5) {
-//             System.out.println("Invalid usage");
-//             System.exit(0);
-//         }
-//     }
-
-//     public ArrayList<String> parseArgument(String[] args) {
-//         ArrayList<String> command = new ArrayList<>();
-
-//         for (int i = 0; i < args.length; i++) {
-//             if (i == 0) {
-//                 command.add(args[i].toLowerCase());
-//             }
-//             else {
-//                 command.add(args[i]);
-//             }
-//         }
-
-//         return command;
-//     }
-// }
 
 class LogLineParser {
 
     public ArrayList<String> parse(String loggerLine) {
-        // String[] clearQuotes = loggerLine.split("\"");
-        // ArrayList<String> clearedQuotes = Arrays.stream(target)
-        //                     .filter(word -> !word.isEmpty())
-        //                     .collect(Collectors.toCollection(ArrayList::new));
-        // // describe taskname description size
-        // String[] clearSpace = clearedQuotes.get(0)
-        // return Arrays.stream(target)
-        //             .filter(word -> !word.isEmpty())
-        //             .collect(Collectors.toCollection(ArrayList::new));
         ArrayList<String> logParts = new ArrayList<>();
         String[] qutoeParts = loggerLine.split("\"");
 
@@ -91,7 +51,9 @@ class CorrectCommand {
     }
 
     public Operation GetCorrectInstance(String[] command) {
-        if(command[0].equals("start")) 
+        if (command[0].equals("summary"))
+            { return new Summary(command); }
+        else if(command[0].equals("start")) 
             { return new Start(command); }
         else if (command[0].equals("stop")) 
             { return new Stop(command); }
@@ -148,6 +110,18 @@ class Logger {
             System.exit(0);
         }
         
+    }
+}
+
+class Util {
+    public static Boolean isASize(String size) {
+        String[] validSizes = {"S", "M", "L", "XL"};
+
+        for (String validSize : validSizes) {
+            if (size.equals(validSize))
+                 { return true; }
+        }
+        return false;
     }
 }
 
@@ -226,134 +200,96 @@ class Metadata {
     }
 }
 
-interface Operation {
-    void run(String[] args);
-    String toString();
-}
+class Summary implements Operation {
 
-class Start implements Operation {
-    private Logger logger = new Logger();
-    private String name = "start";
-
-    public Start(String[] args) {
-        if(args.length!= 2) { 
-            System.out.println("Incorrect Usage of start\n"
-                                + "Usage: java TM.java start <task name>"
-                              );
-            System.exit(1);
-        }
-    }
-
-    @Override
-    public void run(String[] args) {
-        LocalDateTime time = LocalDateTime.now();
-        String command = args[0];
-        String taskName = args[1];
-        String writeLine =  time + " " 
-                            + taskName + " "
-                            + command;
-        logger.appendToFile(writeLine);
-    }
-
-    public String toString() {
-        return name;
-    } 
-}
-
-class Stop implements Operation {
-    private Logger logger = new Logger();
-    private String name = "Stop";
-
-    public Stop(String[] args) {
-        if(args.length != 2) { 
-            System.out.println("Incorrect Usage of stop\n"
-                                + "Usage: java TM.java stop <task name>"
-                              );
-            System.exit(1);
-        }
-    }
-
-    @Override
-    public void run(String[] args) {
-        LocalDateTime time = LocalDateTime.now();
-        String command = args[0];
-        String taskName = args[1];
-        String writeLine =  time + " " 
-                            + taskName + " "
-                            + command;
-        logger.appendToFile(writeLine);
-    }
-
-    @Override
-    public String toString() {
-        return name;
-    } 
-}
-
-class Describe implements Operation {
-    private Logger logger = new Logger();
-
-    public Describe(String[] args) {
-        if(args.length != 3 && args.length != 4 ) { 
-            System.out.println("Incorrect Usage of describe\n"
-                                + "Usage: java TM.java describe"
-                                + " <task name> <description> [{S|M|L|XL}]"
-                              );
-            System.exit(1);
-        }
-        else if(args.length == 4 && !isValidSize(args[3])) {
-            System.out.println("Incorrect size listed\n"
-                                + "Valid sizes: {S|M|L|XL}"
-                              );
-            System.exit(1);
-        }
-    }
-
-    @Override
-    public void run(String[] args) {
-        LocalDateTime time = LocalDateTime.now();
-        String command = args[0];
-        String taskName = args[1];
-        String description = args[2];
-        String size;
-
-        String writeLine =  time + " " 
-                            + taskName + " "
-                            + command + " "
-                            + "\"" + description + "\"";
-        
-        if(args.length == 4) {
-            size = args[3];
-            writeLine += " " + size;
-        }
-        logger.appendToFile(writeLine);
-    }
-
-    @Override
-    public String toString() {
-        return "describe";
-    } 
-
-    private Boolean isValidSize(String size) {
-        String[] validSizes = {"S", "M", "L", "XL"};
-
-        for (String validSize : validSizes) {
-            if (size.equals(validSize)) { return true; }
-        }
-        return false;
-    }
-}
-
-class Summary {
+    public Summary(String[] args) {}
     private final Logger logger = new Logger();
     private final LogLineParser logParser = new LogLineParser();
     private HashMap<String, Metadata> data = new HashMap<>();
     
-    public void run() {
+    public void run(String[] args) {
        
         ArrayList<String> log = logger.read();
         for(int i = 0; i < log.size(); i++) {
-            ArrayList<String> parsedLine = logParser.parse(log.get(i));
+            // ArrayList<String> parsedLine = logParser.parse(log.get(i));
+
+            // if(parsedLine.size() < 3 || parsedLine.size() > 6) {
+            //     continue;
+            // }
+            // String time = parsedLine.get(0);
+            // String taskName = parsedLine.get(1);
+            // String command = parsedLine.get(2);
+            // Boolean newEntry = false;
+            // LocalDateTime dateTime;
+            // Metadata metadata;
+
+            // if(data.containsKey(taskName)) {
+            //     metadata = data.get(taskName);
+            // }
+            // else {
+            //     newEntry = true;
+            //     metadata = new Metadata();
+            //     metadata.setTaskName(taskName);
+            // }
+
+            // if(validtateDateTime(time, i)) {
+            //     DateTimeFormatter format = DateTimeFormatter
+            //                                .ISO_LOCAL_DATE_TIME;
+            //     dateTime = LocalDateTime.parse(time, format);
+            // }
+            // else {
+            //     System.out.println("Malformed date in log on line " + (i + 1));
+            //     dateTime = null;
+            //     System.exit(1);
+            // }
+            
+            // if(command.equals("start")) {
+            //     metadata.setStartTime(dateTime);
+            // }
+            // else if(command.equals("stop")) {
+            //     metadata.setTotalTime(dateTime);
+            // }
+            // else if(command.equals("describe")) {
+            //     String description = parsedLine.get(3);
+            //     String size = "";
+            //     if (parsedLine.size() == 5) {
+            //         size = parsedLine.get(4);
+            //     }
+            //     metadata.setDescription(description, size);
+            // }
+            // else if(command.equals("size")) {
+            //     String size = parsedLine.get(3);
+            //     metadata.setSize(size);
+            // }
+            // else if(command.equals("rename")) {
+            //     if(!newEntry) {
+            //         String newName = parsedLine.get(3);
+            //         data.remove(taskName);
+            //         taskName = newName;
+            //         metadata.setTaskName(taskName);
+            //     }
+            //     else 
+            //     { continue; }
+            // }
+            // else if(command.equals("delete")) {
+            //     data.remove(taskName);
+            //     continue;
+            // }
+            // else {
+            //     System.out.println("Command \"" + command + "\" not recognized"
+            //                         + " on line " + (i + 1) + "\n"
+            //                         +  "Skipping...\n");
+            //     continue;
+            // }
+
+            // data.put(taskName, metadata);
+            processLogLines(log.get(i), i);
+        }
+        getSummary(args);
+    }
+
+    private void processLogLines(String logLines, int lineNumber) {
+        ArrayList<String> parsedLine = logParser.parse(log.get(i));
 
             if(parsedLine.size() < 3 || parsedLine.size() > 6) {
                 continue;
@@ -425,7 +361,6 @@ class Summary {
             }
 
             data.put(taskName, metadata);
-        }
     }
 
     public void getSummary(String[] command) {
@@ -458,7 +393,7 @@ class Summary {
         for (String taskName : data.keySet()) {
             Metadata metadata = data.get(taskName);
             String size = metadata.getSize();
-            if(isASize(size)) {
+            if(Util.isASize(size)) {
                 ArrayList<Long> time = times.get(size);
                 time.add(metadata.getTotalTime());
                 times.put(size, time);
@@ -481,7 +416,7 @@ class Summary {
     }
 
     private void summary(String taskOrSize) {
-        if(!isASize(taskOrSize)) {
+        if(!Util.isASize(taskOrSize)) {
             String taskName = "";
 
             for (String task : data.keySet()) {
@@ -568,23 +503,114 @@ class Summary {
             { timeString = timeString.concat("" + remainingSeconds); }
         return timeString;
     }
+}
 
-    private Boolean isASize(String size) {
-        String[] validSizes = {"S", "M", "L", "XL"};
+interface Operation {
+    void run(String[] args);
+}
 
-        for (String validSize : validSizes) {
-            if (size.equals(validSize))
-                 { return true; }
+class Start implements Operation {
+    private Logger logger = new Logger();
+
+    public Start(String[] args) {
+        if(args.length!= 2) { 
+            System.out.println("Incorrect Usage of start\n"
+                                + "Usage: java TM.java start <task name>"
+                              );
+            System.exit(1);
         }
-        return false;
     }
+
+    @Override
+    public void run(String[] args) {
+        LocalDateTime time = LocalDateTime.now();
+        String command = args[0];
+        String taskName = args[1];
+        String writeLine =  time + " " 
+                            + taskName + " "
+                            + command;
+        logger.appendToFile(writeLine);
+    }
+}
+
+class Stop implements Operation {
+    private Logger logger = new Logger();
+
+    public Stop(String[] args) {
+        if(args.length != 2) { 
+            System.out.println("Incorrect Usage of stop\n"
+                                + "Usage: java TM.java stop <task name>"
+                              );
+            System.exit(1);
+        }
+    }
+
+    @Override
+    public void run(String[] args) {
+        LocalDateTime time = LocalDateTime.now();
+        String command = args[0];
+        String taskName = args[1];
+        String writeLine =  time + " " 
+                            + taskName + " "
+                            + command;
+        logger.appendToFile(writeLine);
+    }
+}
+
+class Describe implements Operation {
+    private Logger logger = new Logger();
+
+    public Describe(String[] args) {
+        if(args.length != 3 && args.length != 4 ) { 
+            System.out.println("Incorrect Usage of describe\n"
+                                + "Usage: java TM.java describe"
+                                + " <task name> <description> [{S|M|L|XL}]"
+                              );
+            System.exit(1);
+        }
+        else if(args.length == 4 && !Util.isASize(args[3])) {
+            System.out.println("Incorrect size listed\n"
+                                + "Valid sizes: {S|M|L|XL}"
+                              );
+            System.exit(1);
+        }
+    }
+
+    @Override
+    public void run(String[] args) {
+        LocalDateTime time = LocalDateTime.now();
+        String command = args[0];
+        String taskName = args[1];
+        String description = args[2];
+        String size;
+
+        String writeLine =  time + " " 
+                            + taskName + " "
+                            + command + " "
+                            + "\"" + description + "\"";
+        
+        if(args.length == 4) {
+            size = args[3];
+            writeLine += " " + size;
+        }
+        logger.appendToFile(writeLine);
+    }
+
+    // private Boolean isValidSize(String size) {
+    //     String[] validSizes = {"S", "M", "L", "XL"};
+
+    //     for (String validSize : validSizes) {
+    //         if (size.equals(validSize)) { return true; }
+    //     }
+    //     return false;
+    // }
 }
 
 class Size implements Operation {
     private Logger logger = new Logger();
 
     public Size(String[] args) {
-        if(args.length != 3 || isValidSize(args[2])) { 
+        if(args.length != 3 || Util.isASize(args[2])) { 
             System.out.println("Incorrect Usage of size\n"
                                 + "Usage: java TM.java size" 
                                 + " <task name> {S|M|L|XL}"
@@ -608,15 +634,15 @@ class Size implements Operation {
         logger.appendToFile(writeLine);
     }
 
-    private Boolean isValidSize(String size) {
-        String[] validSizes = {"S", "M", "L", "XL"};
+    // private Boolean isASize(String size) {
+    //     String[] validSizes = {"S", "M", "L", "XL"};
 
-        for (String validSize : validSizes) {
-            if (size == validSize)
-                 { return true; }
-        }
-        return false;
-    }
+    //     for (String validSize : validSizes) {
+    //         if (size == validSize)
+    //              { return true; }
+    //     }
+    //     return false;
+    // }
 }
 
 class Rename implements Operation {
@@ -673,59 +699,3 @@ class Delete implements Operation {
         logger.appendToFile(writeLine);
     }
 }
-
-// -----------------------------------------------------------------------
-// interface MyInterface {
-//     void someMethod();
-// }
-
-// class MyClass implements MyInterface {
-//     @Override
-//     public void someMethod() {
-//         System.out.println("Implementation of someMethod");
-//     }
-// }
-
-// class MyClass2 implements MyInterface {
-//     @Override
-//     public void someMethod() {
-//         System.out.println("Some other method")
-//     }
-// }
-
-// public class Main {
-//     public static void main(String[] args) {
-//         MyInterface myObject = createObject();
-//         myObject.someMethod();
-//     }
-
-//     public static MyInterface createObject() {
-//         // Instantiate and return a class that implements MyInterface
-//         return new MyClass2();
-//     }
-// }
-// start foo
-// stop foo
-// rename foo oop
-
-// public class StringParsingExample {
-//     public static void main(String[] args) {
-//         String input = "This \"is a\" string";
-//         String[] parts = input.split("\""); // First split on quotes
-
-//         List<String> cleanedParts = new ArrayList<>();
-//         for (String part : parts) {
-//             String[] subParts = part.trim().split("\\s+"); // Split each part on whitespace
-//             for (String subPart : subParts) {
-//                 if (!subPart.isEmpty()) {
-//                     cleanedParts.add(subPart);
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-//         long hours = secondsElapsed / 3600;
-        // long minutes = (secondsElapsed % 3600) / 60;
-        // long seconds = secondsElapsed % 60;
