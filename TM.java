@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -18,14 +17,14 @@ public class TM {
 }
 
 class LogLineParser {
-
     public ArrayList<String> parse(String loggerLine) {
         ArrayList<String> logParts = new ArrayList<>();
+        int descriptionPart = 1;
         String[] qutoeParts = loggerLine.split("\"");
 
         for(int i = 0; i < qutoeParts.length; i++) {
             // If i is 1, this means that we have a describe command
-            if (i == 1) {
+            if (i == descriptionPart) {
                 logParts.add(qutoeParts[i]);
                 continue;
             }
@@ -87,8 +86,8 @@ class Logger {
 
             scanner.close();
         } catch (IOException e){
-            System.out.println("Could not read log" + e);
-            System.exit(0);
+            System.out.println("Log does not exist: " + e);
+            System.exit(1);
         }
         
         return logList;
@@ -106,8 +105,8 @@ class Logger {
             writer.write(writeToLog + '\n');
             writer.close();
         } catch (IOException e) {
-            System.out.println("Could not write to file" + e);
-            System.exit(0);
+            System.out.println("Could not write to file: " + e);
+            System.exit(1);
         }
         
     }
@@ -163,9 +162,9 @@ class Metadata {
             this.taskStarted = false;
             this.totalTime += seconds;
         }
-        else {
-            System.out.println("Ignoring stop");
-        }
+        // else {
+        //     System.out.println("Ignoring stop");
+        // }
     }
 
     public void setDescription(String description, String size) {
@@ -289,78 +288,82 @@ class Summary implements Operation {
     }
 
     private void processLogLines(String logLines, int lineNumber) {
-        ArrayList<String> parsedLine = logParser.parse(log.get(i));
+        ArrayList<String> parsedLine = logParser.parse(logLines);
 
-            if(parsedLine.size() < 3 || parsedLine.size() > 6) {
-                continue;
-            }
-            String time = parsedLine.get(0);
-            String taskName = parsedLine.get(1);
-            String command = parsedLine.get(2);
-            Boolean newEntry = false;
-            LocalDateTime dateTime;
-            Metadata metadata;
+        if(parsedLine.size() < 3 || parsedLine.size() > 6) {
+            return;
+        }
 
-            if(data.containsKey(taskName)) {
-                metadata = data.get(taskName);
+        String time = parsedLine.get(0);
+        String taskName = parsedLine.get(1);
+        String command = parsedLine.get(2);
+        LocalDateTime dateTime = parseDateTime(time, lineNumber);
+        Metadata metadata = getOrCreateMetadata(taskName);
+
+        if(command.equals("start")) {
+            metadata.setStartTime(dateTime);
+            data.put(taskName, metadata);
+        }
+        else if(command.equals("stop")) {
+            metadata.setTotalTime(dateTime);
+            data.put(taskName, metadata);
+        }
+        else if(command.equals("describe")) {
+            String description = parsedLine.get(3);
+            String size = "";
+            if (parsedLine.size() == 5) {
+                size = parsedLine.get(4);
             }
-            else {
-                newEntry = true;
-                metadata = new Metadata();
+            metadata.setDescription(description, size);
+            data.put(taskName, metadata);
+        }
+        else if(command.equals("size")) {
+            String size = parsedLine.get(3);
+            metadata.setSize(size);
+            data.put(taskName, metadata);
+        }
+        else if(command.equals("rename")) {
+            if (data.containsKey(taskName)) {
+                String newName = parsedLine.get(3);
+                data.remove(taskName);
+                taskName = newName;
                 metadata.setTaskName(taskName);
+                data.put(taskName, metadata);
             }
+        }
+        else if(command.equals("delete")) {
+            data.remove(taskName);
+        }
+        else {
+            System.out.println("Command \"" + command + "\" not recognized"
+                                + " on line " + (lineNumber + 1) + "\n"
+                                +  "Skipping...\n");
+        }
+    }
 
-            if(validtateDateTime(time, i)) {
+    private LocalDateTime parseDateTime(String time, int lineNumber) {
+        if(validtateDateTime(time, lineNumber)) {
                 DateTimeFormatter format = DateTimeFormatter
                                            .ISO_LOCAL_DATE_TIME;
-                dateTime = LocalDateTime.parse(time, format);
+                return LocalDateTime.parse(time, format);
             }
-            else {
-                System.out.println("Malformed date in log on line " + (i + 1));
-                dateTime = null;
-                System.exit(1);
-            }
-            
-            if(command.equals("start")) {
-                metadata.setStartTime(dateTime);
-            }
-            else if(command.equals("stop")) {
-                metadata.setTotalTime(dateTime);
-            }
-            else if(command.equals("describe")) {
-                String description = parsedLine.get(3);
-                String size = "";
-                if (parsedLine.size() == 5) {
-                    size = parsedLine.get(4);
-                }
-                metadata.setDescription(description, size);
-            }
-            else if(command.equals("size")) {
-                String size = parsedLine.get(3);
-                metadata.setSize(size);
-            }
-            else if(command.equals("rename")) {
-                if(!newEntry) {
-                    String newName = parsedLine.get(3);
-                    data.remove(taskName);
-                    taskName = newName;
-                    metadata.setTaskName(taskName);
-                }
-                else 
-                { continue; }
-            }
-            else if(command.equals("delete")) {
-                data.remove(taskName);
-                continue;
-            }
-            else {
-                System.out.println("Command \"" + command + "\" not recognized"
-                                    + " on line " + (i + 1) + "\n"
-                                    +  "Skipping...\n");
-                continue;
-            }
+        
+        System.out.println("Malformed date in log on line " 
+                           + (lineNumber + 1));
+        System.exit(1);
+        return null; // Not reachable line for compilation purposes
+    }
 
-            data.put(taskName, metadata);
+    private Metadata getOrCreateMetadata(String taskName) {
+        Metadata metadata;
+        if(data.containsKey(taskName)) {
+                metadata = data.get(taskName);
+        }
+        else {
+            metadata = new Metadata();
+            metadata.setTaskName(taskName);
+        }
+        return metadata;
     }
 
     public void getSummary(String[] command) {
@@ -417,60 +420,102 @@ class Summary implements Operation {
 
     private void summary(String taskOrSize) {
         if(!Util.isASize(taskOrSize)) {
-            String taskName = "";
+            // String taskName = "";
 
-            for (String task : data.keySet()) {
-                if(task.equals(taskOrSize)) {
-                    taskName = taskOrSize;
-                    break;
-                }    
-            }
-            if (taskName.equals("")) {
-                System.out.println("Task does not exist");
-                System.exit(1);
-            }
+            // for (String task : data.keySet()) {
+            //     if(task.equals(taskOrSize)) {
+            //         taskName = taskOrSize;
+            //         break;
+            //     }    
+            // }
+            // if (taskName.equals("")) {
+            //     System.out.println("Task does not exist");
+            //     System.exit(1);
+            // }
             
-            Metadata metadata = data.get(taskName);
-            printSummary(metadata);
+            // Metadata metadata = data.get(taskName);
+            // printSummary(metadata);
+
+            summaryByName(taskOrSize);
         }
         else {
-            //TODO: sort by size
-            String size = taskOrSize;
+            // String size = taskOrSize;
 
-            ArrayList<Metadata> metadataList;
-            ArrayList<Long> times = new ArrayList<>();
-            metadataList = data.entrySet().stream()
-                        .filter(entry -> entry.getValue()
-                                              .getSize()
-                                              .equals(size))
-                        .map(entry -> entry.getValue())
-                        .collect(Collectors.toCollection(ArrayList::new));
+            // ArrayList<Metadata> metadataList;
+            // ArrayList<Long> times = new ArrayList<>();
+            // metadataList = data.entrySet().stream()
+            //             .filter(entry -> entry.getValue()
+            //                                   .getSize()
+            //                                   .equals(size))
+            //             .map(entry -> entry.getValue())
+            //             .collect(Collectors.toCollection(ArrayList::new));
 
-            if (metadataList.size() == 0) {
-                System.out.println("Task(s) do not exist for size " + size);
-                System.exit(1);
-            }
-
-            for (Metadata data : metadataList) {
-                times.add(data.getTotalTime());
-                printSummary(data);
-            }
-            if(times.size() >= 2) {
-                printMinMaxAvg(times);
-            }
+            // if (metadataList.size() == 0) {
+            //     System.out.println("Task(s)(s) do not exist for size " + size);
+            //     System.exit(1);
+            // }
+            // for (Metadata data : metadataList) {
+            //     times.add(data.getTotalTime());
+            //     printSummary(data);
+            // }
+            // if(times.size() >= 2) {
+            //     printMinMaxAvg(times);
+            // }
+            summaryBySize(taskOrSize);
         }
     }
 
+    private void summaryByName(String taskName) {
+        if (!data.containsKey(taskName)) {
+            System.out.println("Task does not exist");
+            System.exit(1);
+        }
+
+        Metadata metadata = data.get(taskName);
+        printSummary(metadata);
+    }
+
+    private void summaryBySize(String size) {
+        ArrayList<Metadata> metadataList;
+        ArrayList<Long> times = new ArrayList<>();
+        metadataList = data.entrySet().stream()
+                    .filter(entry -> entry.getValue().getSize().equals(size))
+                    .map(entry -> entry.getValue())
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+        if (metadataList.size() == 0) {
+            System.out.println("Task(s)(s) do not exist for size " + size);
+            System.exit(1);
+        }
+        for (Metadata data : metadataList) {
+            times.add(data.getTotalTime());
+            printSummary(data);
+        }
+        if(times.size() >= 2) {
+            printMinMaxAvg(times);
+        }
+    }
+
+
     private void printMinMaxAvg(ArrayList<Long> times) {
-        Long min = Collections.min(times);
-        Long max = Collections.max(times);
-        Double average = times.stream()
-                            .mapToLong(Long::longValue)
-                            .average()
-                            .orElse(0.0);
-        System.out.println("Minimum time is " + min);
-        System.out.println("Maximum time is " + max);
-        System.out.println("Average time is " + average);
+        long min = times.get(0);
+        long max = times.get(0);
+        long sum = 0;
+        long average;
+
+        for(long time : times) {
+            if(time < min) 
+                { min = time; }
+            else if (time > max)
+                { max = time; }
+            sum += time;
+        }
+
+        average = sum/times.size();
+
+        System.out.println("\tMinimum time:\t" + getTimeFormat(min));
+        System.out.println("\tMaximum time:\t" + getTimeFormat(max));
+        System.out.println("\tAverage time:\t" + getTimeFormat(average));
     }
 
     private void printSummary(Metadata metadata) {
@@ -486,18 +531,19 @@ class Summary implements Operation {
         long hours = seconds / 3600;
         long minutes = (seconds / 60) % 60;
         long remainingSeconds = seconds % 60;
+        long notTwoDigits = 10;
         String timeString = "";
         
-        if (hours < 9) 
+        if (hours < notTwoDigits) 
             { timeString = timeString.concat("0" + hours + ":"); }
         else 
             { timeString = timeString.concat("" + hours + ":"); }
     
-        if (minutes < 9) 
+        if (minutes < notTwoDigits) 
             { timeString = timeString.concat("0" + minutes + ":"); }
         else 
             { timeString = timeString.concat("" + minutes + ":"); }
-        if (remainingSeconds < 9) 
+        if (remainingSeconds < notTwoDigits) 
             { timeString = timeString.concat("0" + remainingSeconds); }
         else 
             { timeString = timeString.concat("" + remainingSeconds); }
@@ -610,7 +656,7 @@ class Size implements Operation {
     private Logger logger = new Logger();
 
     public Size(String[] args) {
-        if(args.length != 3 || Util.isASize(args[2])) { 
+        if(args.length != 3 || !Util.isASize(args[2])) { 
             System.out.println("Incorrect Usage of size\n"
                                 + "Usage: java TM.java size" 
                                 + " <task name> {S|M|L|XL}"
@@ -678,7 +724,7 @@ class Delete implements Operation {
     private Logger logger = new Logger();
 
      public Delete(String[] args) {
-        if(args.length > 3) { 
+        if(args.length != 2) { 
             System.out.println("Incorrect Usage of delete\n"
                                 + " Usage: java TM.java delete <task name>"
                               );
