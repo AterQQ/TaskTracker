@@ -30,7 +30,9 @@ class LogLineParser {
                 logParts.add(qutoeParts[i]);
                 continue;
             }
-            String[] whiteSpaceParts = qutoeParts[i].trim().split("\\s+");
+            String[] whiteSpaceParts = qutoeParts[i]
+                                       .trim()
+                                       .split("\\s+");
             for (String part : whiteSpaceParts) {
                 logParts.add(part);
             }
