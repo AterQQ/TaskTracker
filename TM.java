@@ -56,8 +56,7 @@ class CorrectCommand {
     public Operation GetCorrectInstance(String[] command) {
         if (command[0].equals("summary"))
             { return new Summary(command); }
-        else if (command.length > 1 &&
-                 Util.isASize(command[1])) { 
+        else if (command.length > 1 && Util.isASize(command[1])) { 
             System.out.println("Cannot use size as a task name");
             System.exit(1);
         }
