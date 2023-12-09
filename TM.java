@@ -56,7 +56,8 @@ class CorrectCommand {
     public Operation GetCorrectInstance(String[] command) {
         if (command[0].equals("summary"))
             { return new Summary(command); }
-        else if (Util.isASize(command[1])) { 
+        else if (command.length > 1 &&
+                 Util.isASize(command[1])) { 
             System.out.println("Cannot use size as a task name");
             System.exit(1);
         }
@@ -80,12 +81,12 @@ class CorrectCommand {
 }
 
 class Logger {
-    private String logFile = "TMLog.txt";
-    ArrayList<String> logList = new ArrayList<>();
+    private String logFileName = "TMLog.txt";
+    private ArrayList<String> logList = new ArrayList<>();
      
     public ArrayList<String> read() {
         try {
-            File readFile = new File(logFile);
+            File readFile = new File(logFileName);
             Scanner scanner = new Scanner(readFile);
 
             while(scanner.hasNextLine()) {
@@ -98,18 +99,18 @@ class Logger {
             System.exit(1);
         }
         
-        return logList;
+        return new ArrayList<>(logList);
     }
 
     public void appendToFile(String writeToLog) {
         try {
-            File writeFile = new File(logFile);
+            File writeFile = new File(logFileName);
 
             if(!writeFile.exists()) {
                 writeFile.createNewFile();
             }
 
-            FileWriter writer = new FileWriter(logFile, true);
+            FileWriter writer = new FileWriter(logFileName, true);
             writer.write(writeToLog + '\n');
             writer.close();
         } catch (IOException e) {
@@ -120,7 +121,7 @@ class Logger {
 }
 
 class Util {
-    public static Boolean isASize(String size) {
+    public static boolean isASize(String size) {
         String[] validSizes = {"S", "M", "L", "XL"};
 
         for (String validSize : validSizes) {
@@ -189,15 +190,16 @@ class TaskData {
     public long getTotalTime() {
         return totalTime;
     }
-    public Boolean getTaskStarted() {
-        return taskStarted;
-    }
     public String getDescription() {
         return description;
     }
     public String getSize() {
         return size;
     }
+}
+
+interface Operation {
+    public void run(String[] args);
 }
 
 class Summary implements Operation {
@@ -207,6 +209,7 @@ class Summary implements Operation {
     private final LogLineParser logParser = new LogLineParser();
     private HashMap<String, TaskData> data = new HashMap<>();
     
+    @Override
     public void run(String[] args) {
        
         ArrayList<String> log = logger.read();
@@ -270,6 +273,16 @@ class Summary implements Operation {
         }
     }
 
+    private boolean validtateDateTime(String time, int lineIndex) {
+        try {
+            DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            LocalDateTime.parse(time, format);
+            return true;
+        } catch (DateTimeParseException e) {
+            return false;
+        }
+    }
+
     private LocalDateTime parseDateTime(String time, int lineNumber) {
         if(validtateDateTime(time, lineNumber)) {
                 DateTimeFormatter format = DateTimeFormatter
@@ -295,26 +308,22 @@ class Summary implements Operation {
         return taskData;
     }
 
-    public void getSummary(String[] command) {
+    private void getSummary(String[] command) {
         if(command.length == 1) 
-            { summary(); }
-        else {
+            { _summary(); }
+        else if (command.length == 2) {
             String taskName = command[1];
-            summary(taskName);
+            _summary(taskName);
+        }
+        else {
+            System.out.println("Incorrect Usage of summary\n"
+                                + "Usage: java TM.java summary [<task name> | {S|M|L|XL}]"
+                              );
+            System.exit(1);
         }
     }
 
-    private Boolean validtateDateTime(String time, int lineIndex) {
-        try {
-            DateTimeFormatter format = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-            LocalDateTime.parse(time, format);
-            return true;
-        } catch (DateTimeParseException e) {
-            return false;
-        }
-    }
-
-    private void summary() {
+    private void _summary() {
         long totalTime = 0;
         HashMap<String, ArrayList<Long>> times = new HashMap<>();
         times.put("S", new ArrayList<Long>());
@@ -337,7 +346,7 @@ class Summary implements Operation {
                             + getTimeFormat(totalTime));
     }
     
-    private Long getTotalTime(long totalTime, 
+    private long getTotalTime(long totalTime, 
                                HashMap<String, ArrayList<Long>> times) {
         for (String taskName : data.keySet()) {
             TaskData taskData = data.get(taskName);
@@ -354,16 +363,16 @@ class Summary implements Operation {
         return totalTime;
     }
 
-    private void summary(String taskOrSize) {
+    private void _summary(String taskOrSize) {
         if(!Util.isASize(taskOrSize)) {
-            summaryByName(taskOrSize);
+            _summaryByName(taskOrSize);
         }
         else {
-            summaryBySize(taskOrSize);
+            _summaryBySize(taskOrSize);
         }
     }
 
-    private void summaryByName(String taskName) {
+    private void _summaryByName(String taskName) {
         if (!data.containsKey(taskName)) {
             System.out.println("Task does not exist");
             System.exit(1);
@@ -373,7 +382,7 @@ class Summary implements Operation {
         printSummary(taskData);
     }
 
-    private void summaryBySize(String size) {
+    private void _summaryBySize(String size) {
         ArrayList<TaskData> taskDataList;
         ArrayList<Long> times = new ArrayList<>();
         taskDataList = data.entrySet().stream()
@@ -446,10 +455,6 @@ class Summary implements Operation {
             { timeString = timeString.concat("" + remainingSeconds); }
         return timeString;
     }
-}
-
-interface Operation {
-    void run(String[] args);
 }
 
 class Start implements Operation {
