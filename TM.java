@@ -168,6 +168,10 @@ class TaskData {
         }
     }
 
+    public void totalTimeRename(long time) {
+        this.totalTime += time;
+    }
+
     public void setDescription(String description, String size) {
         this.description = this.description.concat(description);
         if(size != null) {
@@ -254,13 +258,24 @@ class Summary implements Operation {
             data.put(taskName, taskData);
         }
         else if(command.equals("rename")) {
+            String newName = parsedLine.get(3);
+            TaskData oldData = getOrCreateTaskData(newName);
+            long oldTime = 0;
             if (data.containsKey(taskName)) {
-                String newName = parsedLine.get(3);
+                if(data.containsKey(newName)) {
+                    oldTime = oldData.getTotalTime();
+                    taskData.totalTimeRename(oldTime);
+                }
                 data.remove(taskName);
                 taskName = newName;
                 taskData.setTaskName(taskName);
                 data.put(taskName, taskData);
             }
+            // else {
+            //   System.out.println("Task " + newName + " already exists" 
+            //                       + " on line "+ (lineNumber + 1)
+            //                       +  "\nNot renaming...\n" );
+            // }
         }
         else if(command.equals("delete")) {
             data.remove(taskName);
